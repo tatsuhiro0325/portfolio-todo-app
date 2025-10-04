@@ -4,16 +4,16 @@ export default {
   frontend: {
     input,
     output: {
-      target: "src/gen/api.ts",                 // 型 & クライアントの出力
-      schemas: "src/gen/models",                // スキーマ型の出力ディレクトリ
-      client: "react-query",                    // axios + react-query hooks を生成
-      httpClient: "axios",                      // axiosを使う
+      target: "src/gen/api.ts", // 型 & クライアントの出力
+      schemas: "src/gen/models", // スキーマ型の出力ディレクトリ
+      client: "react-query", // axios + react-query hooks を生成
+      httpClient: "axios", // axiosを使う
       // React Queryのオプション（好みで）
-      useUnionTypes: true,                      // oneOf/anyOfをユニオン型に
-      exportSchemas: true,                      // スキーマ型もexport
-      typedHooks: true,                         // useQuery/useMutationの型を厳密化
+      useUnionTypes: true, // oneOf/anyOfをユニオン型に
+      exportSchemas: true, // スキーマ型もexport
+      typedHooks: true, // useQuery/useMutationの型を厳密化
       // hooks命名のSuffixなど
-      nameSuffix: "Hook",                       // 例: useGetUsersHook
+      nameSuffix: "Hook", // 例: useGetUsersHook
       // キャッシュキーやsuspenseなどの微調整（必要なら）
       override: {
         mutator: {
@@ -28,4 +28,4 @@ export default {
     },
     mock: true, // ← これで MSW のハンドラも生成される
   },
-}
+};

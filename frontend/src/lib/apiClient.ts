@@ -13,7 +13,6 @@ const instance = axios.create({
 export const apiClient = async <T>(
   config: AxiosRequestConfig, // orvalから渡されるリクエスト設定
 ): Promise<T> => {
-  
   // インスタンスを使ってリクエストを実行
   const promise = instance.request<T, AxiosResponse<T>>(config);
 
