@@ -1,23 +1,28 @@
 'use client';
 
-import { createTodo, useCreateTodo, useGetTodos, updateTodoDone } from "@/gen/api";
-import { CreateTodoRequest, Todo, UpdateTodoDoneRequest } from "@/gen/models";
+import { useState } from "react";
+import { createTodo, useCreateTodo, useGetTodos, updateTodoDone, updateTodo } from "@/gen/api";
+import { CreateTodoRequest, Todo, UpdateTodoDoneRequest, UpdateTodoRequest } from "@/gen/models";
 import { useMutation, useQueryClient } from "@tanstack/react-query"; // <- React Queryのフックをインポート
 import { todo } from "node:test";
 
 export default function Home() {
   const { data, isLoading, error } = useGetTodos();
 
-  // 2. QueryClientのインスタンスを取得
-  //    invalidateQueries（キャッシュの無効化）に利用します
+  //  QueryClientのインスタンスを取得
+  //  invalidateQueries（キャッシュの無効化）に利用します
   const queryClient = useQueryClient();
 
-  // 3. ToDoを「更新」するためのMutationを定義
+  //  編集中のToDoの状態を管理するためのstateを追加
+  //  編集中でない場合はnull、編集中はそのToDoオブジェクトが入ります
+  const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
+
+  //  ToDoを「更新」するためのMutationを定義
   const updateTodoDoneMutation = useMutation({
     mutationFn: (todo: Todo) => {
       // isDoneの状態を反転させて更新APIを呼び出す
       const requestBody: UpdateTodoDoneRequest = { isDone: !todo.isDone };
-      return updateTodoDone(todo.id, { isDone: !todo.isDone });
+      return updateTodoDone(todo.id, requestBody);
     },
     onSuccess: () => {
       // ToDoの更新が成功したら、ToDoリストのキャッシュを無効化して再取得を促す
@@ -28,6 +33,23 @@ export default function Home() {
     }
   });
 
+  // ToDoのタイトル・詳細を「更新」するためのMutationを追加します
+  const updateTodoMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string, data: UpdateTodoRequest }) => {
+      return updateTodo(id, data);
+    },
+    onSuccess: () => {
+      // 更新が成功したら、キャッシュを無効化してリストを再取得
+      queryClient.invalidateQueries({ queryKey: ["getTodos"] });
+      // 編集モードを終了
+      setEditingTodo(null); 
+    },
+    onError: (error) => {
+      console.error("更新に失敗しました", error);
+    },
+  });
+
+  // isDoneの状態を切り替えるハンドラ
   const handleToggleIsDone = (todo: Todo) => {
     // 上で定義したMutationを実行する
     return () => {
@@ -35,9 +57,42 @@ export default function Home() {
     };
   };
 
+  // 新規ToDo作成のハンドラ
   function handleSumit (data: CreateTodoRequest){
     createTodo(data)
   }
+
+  // 編集に関するハンドラを追加
+  // 編集ボタンがクリックされた時の処理
+  const handleEditClick = (todo: Todo) => {
+    // どのToDoを編集するかstateに保存する
+    setEditingTodo({...todo});
+  };
+
+  // 「キャンセル」ボタンがクリックされたときの処理
+  const handleCancelClick = () => {
+    // 編集モードを終了する
+    setEditingTodo(null);
+  };
+
+  // 「保存」ボタンがクリックされたときの処理
+  const handleSaveClick = () => {
+    if(!editingTodo) return;
+
+    // APIリクエスト用に不要なプロパティを除外する
+    const { id, createdAt, updatedAt, isDone, ...updateData } = editingTodo;
+
+    updateTodoMutation.mutate({ id: editingTodo.id, data: updateData });
+  };
+
+  // 編集中の入力欄の値が変更されたときの処理
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if(!editingTodo) return;
+
+    const { name, value } = e.target;
+    // 入力内容をstateに反映する
+    setEditingTodo({ ...editingTodo, [name]: value });
+  };
 
 
   return (
@@ -56,6 +111,8 @@ export default function Home() {
         description: formData.get("description") as string,
       };
       handleSumit(data);
+      // フォームをリセット
+      event.currentTarget.reset(); 
     }}
   >
     {/* タイトル入力欄 */}
@@ -88,32 +145,90 @@ export default function Home() {
     </button>
   </form>
 </div>
-      <table>
+      <table className="w-full max-w-4xl bg-white shadow-md rounded-lg">
         {/* テーブルヘッダーをつけて見やすくする */}
         <thead>
-          <tr>
+          <tr className="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
             <th className="px-4 py-2">ID</th>
             <th className="px-4 py-2">Title</th>
             <th className="px-4 py-2">Description</th>
             <th className="px-4 py-2">Is Done</th>
+            <th className="py-3 px-6 text-center">Actions</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="text-gray-600 text-sm font-light">
           {data?.map((todo) => (
-            <tr key={todo.id}>
-              <td className="border px-4 py-2">{todo.id}</td>
-              <td className="border px-4 py-2">{todo.title}</td>
-              <td className="border px-4 py-2">{todo.description}</td>
-              <td className="border px-4 py-2">
+            <tr key={todo.id} className="border-b border-gray-200 hover:bg-gray-100">
+              {/* editingTodoのIDと現在のtodoのIDを比較して、表示を切り替える */}
+              {editingTodo && editingTodo.id === todo.id ? (
+                // --- 編集モードの表示 ---
+                <>
+                <td className="py-3 px-6 text-left whitespace-nowrap">{todo.id}</td>
+                <td className="py-3 px-6 text-left">
+                  <input
+                    type="text"
+                    name="title"
+                    value={editingTodo.title}
+                    onChange={handleInputChange}
+                    className="w-full px-2 py-1 border border-gray-300 rounded"
+                  />
+                </td>
+                <td className="py-3 px-6 text-left">
+                  <input
+                    type="text"
+                    name="description"
+                    value={editingTodo.description}
+                    onChange={handleInputChange}
+                    className="w-full px-2 py-1 border border-gray-300 rounded"
+                  />
+                </td>
+                <td className="py-3 px-6 textcenter">
+                  {/* 完了状態はここでは編集しない */}
+                  <span className="text-2xl">{todo.isDone ? "✅" : "❌"}</span>
+                </td>
+                <td className="py-3 px-6 text-center">
+                  <button
+                    onClick={handleSaveClick}
+                    // 更新中はクリックできないようにする
+                    disabled={updateTodoMutation.isPending} 
+                    className="bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600 mr-2"
+                  >
+                    {updateTodoMutation.isPending ? "Saving..." : "Save"}
+                  </button>
+                  <button
+                    onClick={handleCancelClick}
+                    className="bg-gray-500 text-white px-3 py-1 rounded text-xs hover:bg-gray-600"
+                  >
+                    Cancel
+                  </button>
+                </td>
+                </>
+              ) : (
+                // --- 通常表示モード ---
+                <>
+              <td className="py-3 px-6 text-left whitespace-nowrap">{todo.id}</td>
+              <td className="py-3 px-6 text-left">{todo.title}</td>
+              <td className="py-3 px-6 text-left">{todo.description}</td>
+              <td className="py-3 px-6 text-center">
                 <button
                   onClick={handleToggleIsDone(todo)}
-                  className="cursor-pointer"
+                  className="cursor-pointer text-2xl"
                   // 更新中はクリックできないようにする
                   disabled={updateTodoDoneMutation.isPending} 
                 >
-                {todo.isDone ? "✅" : "❌"}
+                  {todo.isDone ? "✅" : "❌"}
                 </button>
               </td>
+              <td className="py-3 px-6 text-center">
+                <button
+                  onClick={() => handleEditClick(todo)}
+                  className="bg-blue-500 text-white py-1 px-3 rounded text-xs hover:bg-blue-600"
+                >
+                  Edit
+                </button>
+              </td>
+              </>
+              )}
             </tr>
           ))}
         </tbody>
