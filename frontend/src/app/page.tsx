@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from "react";
-import { createTodo, useCreateTodo, useGetTodos, updateTodoDone, updateTodo } from "@/gen/api";
+import { createTodo, useCreateTodo, useGetTodos, updateTodoDone, updateTodo, useDeleteTodo } from "@/gen/api";
 import { CreateTodoRequest, Todo, UpdateTodoDoneRequest, UpdateTodoRequest } from "@/gen/models";
 import { useMutation, useQueryClient } from "@tanstack/react-query"; // <- React Queryのフックをインポート
 import { todo } from "node:test";
@@ -49,6 +49,19 @@ export default function Home() {
     },
   });
 
+  // ToDoを「削除」するためのMutationを追加
+  const deleteTodoMutation = useDeleteTodo({
+    mutation: {
+      onSuccess: () => {
+        // 削除が成功したら、キャッシュを無効化してリストを再取得
+        queryClient.invalidateQueries({ queryKey: ["getTodos"] });
+      },
+      onError: (error: Error) => {
+        console.error("削除に失敗しました", error);
+      },
+    },
+  });
+
   // isDoneの状態を切り替えるハンドラ
   const handleToggleIsDone = (todo: Todo) => {
     // 上で定義したMutationを実行する
@@ -83,6 +96,14 @@ export default function Home() {
     const { id, createdAt, updatedAt, isDone, ...updateData } = editingTodo;
 
     updateTodoMutation.mutate({ id: editingTodo.id, data: updateData });
+  };
+
+  // 「削除」ボタンがクリックされたときの処理
+  const handleDeleteClick = (todoId: string) => {
+    // ユーザーに削除の確認を求める
+    if(window.confirm("Are you sure you want to delete this todo?")) {
+      deleteTodoMutation.mutate({ id: todoId });
+    }
   };
 
   // 編集中の入力欄の値が変更されたときの処理
@@ -225,6 +246,13 @@ export default function Home() {
                   className="bg-blue-500 text-white py-1 px-3 rounded text-xs hover:bg-blue-600"
                 >
                   Edit
+                </button>
+                <button
+                  onClick={() => handleDeleteClick(todo.id)}
+                  disabled={deleteTodoMutation.isPending}
+                  className="bg-red-500 text-white py-1 px-3 rounded text-xs hover:bg-red-600"
+                >
+                  {deleteTodoMutation.isPending ? "Deleting..." : "Delete"}
                 </button>
               </td>
               </>
