@@ -4,7 +4,6 @@ import { useState } from "react";
 import { createTodo, useCreateTodo, useGetTodos, updateTodoDone, updateTodo, useDeleteTodo } from "@/gen/api";
 import { CreateTodoRequest, Todo, UpdateTodoDoneRequest, UpdateTodoRequest } from "@/gen/models";
 import { useMutation, useQueryClient } from "@tanstack/react-query"; // <- React Queryのフックをインポート
-import { todo } from "node:test";
 
 export default function Home() {
   const { data, isLoading, error } = useGetTodos();
@@ -101,7 +100,7 @@ export default function Home() {
   // 「削除」ボタンがクリックされたときの処理
   const handleDeleteClick = (todoId: string) => {
     // ユーザーに削除の確認を求める
-    if(window.confirm("Are you sure you want to delete this todo?")) {
+    if(window.confirm("本当にこのタスクを削除しますか？")) {
       deleteTodoMutation.mutate({ id: todoId });
     }
   };
@@ -117,8 +116,8 @@ export default function Home() {
 
 
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <div className="bg-white p-8 rounded-lg shadow-md max-w-md mx-auto my-20 mt-60">
+    <div className="font-sans flex flex-col items-center min-h-screen p-8 gap-8 sm:p-12">
+      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
   <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
     New Task
   </h2>
