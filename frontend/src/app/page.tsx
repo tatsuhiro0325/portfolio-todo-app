@@ -230,14 +230,13 @@ export default function Home() {
               <td className="py-3 px-6 text-left">{todo.title}</td>
               <td className="py-3 px-6 text-left">{todo.description}</td>
               <td className="py-3 px-6 text-center">
-                <button
-                  onClick={handleToggleIsDone(todo)}
-                  className="cursor-pointer text-2xl"
-                  // 更新中はクリックできないようにする
-                  disabled={updateTodoDoneMutation.isPending} 
-                >
-                  {todo.isDone ? "✅" : "❌"}
-                </button>
+                <input
+                  type = "checkbox"
+                  checked = {todo.isDone}
+                  onChange={handleToggleIsDone(todo)}
+                  disabled={updateTodoDoneMutation.isPending}
+                  className="transform scale150 cursor-pointer"
+                />
               </td>
               <td className="py-3 px-6 text-center">
                 <button
@@ -248,6 +247,7 @@ export default function Home() {
                 </button>
                 <button
                   onClick={() => handleDeleteClick(todo.id)}
+                  // 更新中はクリックできないようにする
                   disabled={deleteTodoMutation.isPending}
                   className="bg-red-500 text-white py-1 px-3 rounded text-xs hover:bg-red-600"
                 >
