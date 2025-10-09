@@ -25,7 +25,7 @@ export default function Home() {
     },
     onSuccess: () => {
       // ToDoの更新が成功したら、ToDoリストのキャッシュを無効化して再取得を促す
-      queryClient.invalidateQueries({ queryKey: ["getTodos"] });
+      queryClient.invalidateQueries({ queryKey: ["/todos"] });
     },
     onError: (error) => {
       console.error("更新に失敗しました", error);
@@ -39,7 +39,7 @@ export default function Home() {
     },
     onSuccess: () => {
       // 更新が成功したら、キャッシュを無効化してリストを再取得
-      queryClient.invalidateQueries({ queryKey: ["getTodos"] });
+      queryClient.invalidateQueries({ queryKey: ["/todos"] });
       // 編集モードを終了
       setEditingTodo(null); 
     },
@@ -53,11 +53,21 @@ export default function Home() {
     mutation: {
       onSuccess: () => {
         // 削除が成功したら、キャッシュを無効化してリストを再取得
-        queryClient.invalidateQueries({ queryKey: ["getTodos"] });
+        queryClient.invalidateQueries({ queryKey: ["/todos"] });
       },
       onError: (error: Error) => {
         console.error("削除に失敗しました", error);
       },
+    },
+  });
+
+  const createTodoMutation = useMutation({
+    mutationFn: (data: CreateTodoRequest) => createTodo(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/todos"] });
+    },
+    onError: (error) => {
+      console.error("作成に失敗しました", error);
     },
   });
 
@@ -71,7 +81,7 @@ export default function Home() {
 
   // 新規ToDo作成のハンドラ
   function handleSumit (data: CreateTodoRequest){
-    createTodo(data)
+    createTodoMutation.mutate(data);
   }
 
   // 編集に関するハンドラを追加
@@ -159,9 +169,11 @@ export default function Home() {
     {/* 追加ボタン */}
     <button
       type="submit"
-      className="w-full py-2 px-4 bg-blue-500 text-white font-semibold rounded-md hover:bg-blue-600 transition-colors"
+      disabled={createTodoMutation.isPending}
+      className="w-full py-2 px-4 bg-blue-500 text-white font-semibold rounded-md hover:bg-blue-600 transition-colors disabled:bg-blue-300"
     >
-      Add Task
+      {/* isPending の状態によってボタンのテキストを変更 */}
+      {createTodoMutation.isPending ? "Adding..." : "Add Task"}
     </button>
   </form>
 </div>
